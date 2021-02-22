@@ -19,7 +19,7 @@ byte keymap[ROWS][COLS] = {
 
 Keypad customKeypad = Keypad( makeKeymap(keymap), rowPins, colPins, ROWS, COLS); 
 
-//////////// ROTARY ENCODERS (WITH PUSH SWITCHES) ////////////
+//////////// ROTARY ENCODERS ////////////
 #define MAXENC 3
 uint8_t uppPin[MAXENC] = {21, 16, 18};
 uint8_t dwnPin[MAXENC] = {17, 19, 5};
@@ -34,10 +34,9 @@ int32_t prevenccntr[MAXENC] = {0,0,0};
 #define FUNKY_DIR_COUNT 4
 char funkyPress = 0;
 char funkyDirections[FUNKY_DIR_COUNT] = {13, 9, 5, 17};
+bool handlingFunkySwitch = false;
 
 #define HOLDOFFTIME 50   // TO PREVENT MULTIPLE ROTATE "CLICKS"
-
-bool handlingFunkySwitch = false;
 
 void setup() {
   Serial.begin(115200);
