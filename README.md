@@ -1,5 +1,7 @@
 # Bluetooth Button Box
 
+Originally forked from [Magnus Thome's](https://github.com/MagnusThome/ESP32-BLE-Gamepad) implementation.
+
 ## Parts List
 
 * Micro controller [Adafruit HUZZAH32 – ESP32 Feather Board](https://www.adafruit.com/product/3405) (other ESP32 boards should work fine too)
