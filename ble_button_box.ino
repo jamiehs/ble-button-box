@@ -2,7 +2,8 @@
 #include <Keypad.h>           // https://github.com/Chris--A/Keypad
 #include <BleGamepad.h>       // https://github.com/lemmingDev/ESP32-BLE-Gamepad
 
-BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", 100);
+int batteryLevel = map(analogRead(35), 2297.0f, 2507.0f, 0, 100);
+BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", batteryLevel);
 
 ////////////////////// BUTTON MATRIX //////////////////////
 #define ROWS 5
@@ -35,8 +36,10 @@ int32_t prevenccntr[MAXENC] = {0,0,0};
 char funkyPress = 0;
 char funkyDirections[FUNKY_DIR_COUNT] = {13, 9, 5, 17};
 bool handlingFunkySwitch = false;
+unsigned long funkyHoldoff[4] = {0,0,0,0};
+#define FUNKY_HOLDOFFTIME 300 // 0.3sec
 
-#define HOLDOFFTIME 50   // TO PREVENT MULTIPLE ROTATE "CLICKS"
+#define HOLDOFFTIME 30   // TO PREVENT MULTIPLE ROTATE "CLICKS"
 
 void setup() {
   Serial.begin(115200);
@@ -64,7 +67,7 @@ void loop() {
         holdoff[i] = now;
         if (holdoff[i]==0) holdoff[i] = 1;  // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE holdoff[i]==0 HAS A SPECIAL MEANING ABOVE
       }
-      else if (now-holdoff[i] > HOLDOFFTIME) {
+      else if (now - holdoff[i] > HOLDOFFTIME) {
         prevenccntr[i] = encoder[i].getCount();
         holdoff[i] = 0;
       }
@@ -80,8 +83,13 @@ void loop() {
     routine. We also press the _intended_ direction only.
     */
     for (int i = 0; i < FUNKY_DIR_COUNT; i++) {
+      // if center not handling press, try directions.
       if(customKeypad.findInList((char) funkyPress) != -1 && customKeypad.findInList((char) funkyDirections[i]) != -1) {
-        pressKey((char) funkyDirections[i]);
+        if(now - funkyHoldoff[i] > FUNKY_HOLDOFFTIME) {
+          pressKey((char) funkyDirections[i]);
+          funkyHoldoff[i] = now; // last press send
+        }
+        if (funkyHoldoff[i]==0) funkyHoldoff[i] = 1;   // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE holdoff[i]==0 HAS A SPECIAL MEANING ABOVE
         handlingFunkySwitch = true;
       }
     }
@@ -105,7 +113,7 @@ void loop() {
           break;
         }
 
-        int batteryLevel = map(analogRead(35), 2297.0f, 2607.0f, 0, 100);
+        batteryLevel = map(analogRead(35), 2297.0f, 2607.0f, 0, 100);
         Serial.println(batteryLevel);
         bleGamepad.setBatteryLevel(batteryLevel);
       }
@@ -114,7 +122,7 @@ void loop() {
 
   handlingFunkySwitch = false;
 
-  delay(10);
+  // delay(10);
 }
 
 void sendKey(uint8_t key) {
