@@ -28,9 +28,9 @@ uint8_t dwnPin[MAXENC] = {17, 19, 5};
 uint8_t encoderUpp[MAXENC] = {21,23,25};
 uint8_t encoderDwn[MAXENC] = {22,24,26};
 
-ESP32Encoder encoder[MAXENC];
-unsigned long holdoff[MAXENC] = {0,0,0};
-int32_t prevenccntr[MAXENC] = {0,0,0};
+// ESP32Encoder encoder[MAXENC];
+// unsigned long holdoff[MAXENC] = {0,0,0};
+// int32_t prevenccntr[MAXENC] = {0,0,0};
 
 #define FUNKY_DIR_COUNT 4
 char funkyPress = 0;
@@ -41,38 +41,91 @@ unsigned long funkyHoldoff[4] = {0,0,0,0};
 
 #define HOLDOFFTIME 30   // TO PREVENT MULTIPLE ROTATE "CLICKS"
 
+#define CLK  18
+#define DATA 5
+
 void setup() {
   Serial.begin(115200);
 
-  for (uint8_t i=0; i<MAXENC; i++) {
-    encoder[i].clearCount();
-    encoder[i].attachHalfQuad(dwnPin[i], uppPin[i]);
-  }
+  pinMode(CLK, INPUT);
+  pinMode(CLK, INPUT_PULLUP);
+  pinMode(DATA, INPUT);
+  pinMode(DATA, INPUT_PULLUP);
+
+  // for (uint8_t i=0; i<MAXENC; i++) {
+  //   encoder[i].clearCount();
+  //   encoder[i].attachHalfQuad(dwnPin[i], uppPin[i]);
+  // }
 
   customKeypad.setHoldTime(7000); // 7 seconds is considered holding
   bleGamepad.begin();
   Serial.println("Booted!");
 }
 
+
+static uint8_t prevNextCode = 0;
+static uint16_t store=0;
+
+// A vald CW or  CCW move returns 1, invalid returns 0.
+int8_t read_rotary() {
+  static int8_t rot_enc_table[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
+
+  prevNextCode <<= 2;
+  if (digitalRead(DATA)) prevNextCode |= 0x02;
+  if (digitalRead(CLK)) prevNextCode |= 0x01;
+  prevNextCode &= 0x0f;
+
+   // If valid then store as 16 bit data.
+   if  (rot_enc_table[prevNextCode] ) {
+      store <<= 4;
+      store |= prevNextCode;
+      //if (store==0xd42b) return 1;
+      //if (store==0xe817) return -1;
+      if ((store&0xff)==0x2b) return -1;
+      if ((store&0xff)==0x17) return 1;
+   }
+   return 0;
+}
+
 void loop() {
+
+  static int8_t c,val;
+
+  if( val=read_rotary() ) {
+    c +=val;
+    Serial.print(c);Serial.print(" ");
+
+    if ( prevNextCode==0x0b) {
+        sendKey(25);
+        Serial.print("eleven ");
+        Serial.println(store,HEX);
+    }
+
+    if ( prevNextCode==0x07) {
+        sendKey(26);
+        Serial.print("seven ");
+        Serial.println(store,HEX);
+    }
+  }
+
 
   unsigned long now = millis();
 
-  for (uint8_t i=0; i<MAXENC; i++) {
-    int32_t cntr = encoder[i].getCount();
-    if (cntr!=prevenccntr[i]) {
-      if (!holdoff[i]) {
-        if (cntr>prevenccntr[i]) { sendKey(encoderUpp[i]); }
-        if (cntr<prevenccntr[i]) { sendKey(encoderDwn[i]); }
-        holdoff[i] = now;
-        if (holdoff[i]==0) holdoff[i] = 1;  // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE holdoff[i]==0 HAS A SPECIAL MEANING ABOVE
-      }
-      else if (now - holdoff[i] > HOLDOFFTIME) {
-        prevenccntr[i] = encoder[i].getCount();
-        holdoff[i] = 0;
-      }
-    }
-  }
+  // for (uint8_t i=0; i<MAXENC; i++) {
+  //   int32_t cntr = encoder[i].getCount();
+  //   if (cntr!=prevenccntr[i]) {
+  //     if (!holdoff[i]) {
+  //       if (cntr>prevenccntr[i]) { sendKey(encoderUpp[i]); }
+  //       if (cntr<prevenccntr[i]) { sendKey(encoderDwn[i]); }
+  //       holdoff[i] = now;
+  //       if (holdoff[i]==0) holdoff[i] = 1;  // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE holdoff[i]==0 HAS A SPECIAL MEANING ABOVE
+  //     }
+  //     else if (now - holdoff[i] > HOLDOFFTIME) {
+  //       prevenccntr[i] = encoder[i].getCount();
+  //       holdoff[i] = 0;
+  //     }
+  //   }
+  // }
 
 
   if (customKeypad.getKeys()) {
@@ -131,7 +184,7 @@ void sendKey(uint8_t key) {
     Serial.println(key);
     if(bleGamepad.isConnected()) {
       bleGamepad.press(gamepadbutton);
-      delay(150);
+      delay(75);
       bleGamepad.release(gamepadbutton);
     }
 }
