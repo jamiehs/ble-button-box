@@ -2,15 +2,22 @@
 #include <Keypad.h>           // https://github.com/Chris--A/Keypad
 #include <BleGamepad.h>       // https://github.com/lemmingDev/ESP32-BLE-Gamepad
 
-int batteryLevel = map(analogRead(35), 2297.0f, 2507.0f, 0, 100);
-BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", batteryLevel);
+int getBatteryLevel() {
+  const int MAX_ANALOG_VAL = 4095;
+  const float MAX_BATTERY_VOLTAGE = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
+  float voltageLevel = (analogRead(35) / 4095.0) * 2 * 1.1 * 3.3; // calculate voltage level
+  return (int)(voltageLevel / MAX_BATTERY_VOLTAGE) * 100;
+}
+
+// Set the battery level first or Windows will just read the default of 100
+BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", getBatteryLevel());
 
 ////////////////////// BUTTON MATRIX //////////////////////
 #define ROWS 5
 #define COLS 4
 uint8_t rowPins[ROWS] = {15, 32, 14, 22, 23};
 uint8_t colPins[COLS] = {4, 12, 27, 33};
-byte keymap[ROWS][COLS] = {
+byte keymap[ROWS][COLS] = { // buttons
   { 0, 1, 2, 3},
   { 5, 6, 7, 8},
   { 9,10,11,12},
@@ -30,12 +37,16 @@ uint8_t encPrevNextCode[MAXENC] = {0, 0};
 uint16_t encStore[MAXENC]= {0, 0};
 static int8_t rot_enc_table[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 
-uint8_t encoderUpp[MAXENC] = {21,23,25};
-uint8_t encoderDwn[MAXENC] = {22,24,26};
+uint8_t encoderUpp[MAXENC] = {23,25};
+uint8_t encoderDwn[MAXENC] = {24,26};
 
 ESP32Encoder funkyEncoder;
 unsigned long funkyEncoderHoldoff = 0;
 int32_t funkyEncoderPrevCenter = 0;
+uint8_t funkyEncoderUppPin = 21; // pin number
+uint8_t funkyEncoderDwnPin = 17; // pin number
+uint8_t funkyEncoderUpp = 22; // button number
+uint8_t funkyEncoderDwn = 21; // button number
 
 #define FUNKY_DIR_COUNT 4
 char funkyPress = 0;
@@ -49,14 +60,19 @@ unsigned long funkyHoldoff[4] = {0,0,0,0};
 void setup() {
   Serial.begin(115200);
 
-  pinMode(CLK, INPUT);
-  pinMode(CLK, INPUT_PULLUP);
-  pinMode(DATA, INPUT);
-  pinMode(DATA, INPUT_PULLUP);
+  // setup encoder logic for "encoder table" encoders
+  for (uint8_t i=0; i<MAXENC; i++) {
+    pinMode(uppPin[i], INPUT);
+    pinMode(uppPin[i], INPUT_PULLUP);
+    pinMode(dwnPin[i], INPUT);
+    pinMode(dwnPin[i], INPUT_PULLUP);
+  }
 
-  funkyEncoder[i].clearCount();
-  funkyEncoder[i].attachHalfQuad(21, 17);
+  // different encoder logic for funky encoder
+  funkyEncoder.attachHalfQuad(funkyEncoderUppPin, funkyEncoderDwnPin);
+  funkyEncoder.clearCount();
 
+  // start button & BLE routines/settings
   customKeypad.setHoldTime(7000); // 7 seconds is considered holding
   bleGamepad.begin();
   Serial.println("Booted!");
@@ -87,9 +103,23 @@ void loop() {
     }
   }
 
+  // funky encoder is using ESP32Encoder routine
+  int32_t cntr = funkyEncoder.getCount();
+  if (cntr!=funkyEncoderPrevCenter) {
+    if (!funkyEncoderHoldoff) {
+      if (cntr>funkyEncoderPrevCenter) { sendKey(funkyEncoderUpp); }
+      if (cntr<funkyEncoderPrevCenter) { sendKey(funkyEncoderDwn); }
+      funkyEncoderHoldoff = now;
+      if (funkyEncoderHoldoff==0) funkyEncoderHoldoff = 1;  // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE funkyEncoderHoldoff==0 HAS A SPECIAL MEANING ABOVE
+    }
+    else if (now - funkyEncoderHoldoff > HOLDOFFTIME) {
+      funkyEncoderPrevCenter = funkyEncoder.getCount();
+      funkyEncoderHoldoff = 0;
+    }
+  }
+
 
   if (customKeypad.getKeys()) {
-
     /*
     Loops through the funky switch directions and checks to see if the push is being triggered
     along with another direction. If it is, we will flag it for skipping the normal press
@@ -126,15 +156,12 @@ void loop() {
           break;
         }
 
-        batteryLevel = map(analogRead(35), 2297.0f, 2607.0f, 0, 100);
-        Serial.println(batteryLevel);
-        bleGamepad.setBatteryLevel(batteryLevel);
+        bleGamepad.setBatteryLevel(getBatteryLevel());
       }
     }
   }
 
   handlingFunkySwitch = false;
-
 }
 
 void sendKey(uint8_t key) {
@@ -175,7 +202,7 @@ void releaseKey(uint8_t key) {
     }
 }
 
-
+// https://www.best-microcontroller-projects.com/rotary-encoder.html
 // A vald CW or  CCW move returns 1, invalid returns 0.
 int8_t read_rotary(uint8_t DATA_PIN, uint8_t CLK_PIN, uint8_t i) {
   static int8_t rot_enc_table[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
