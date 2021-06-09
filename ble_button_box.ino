@@ -3,10 +3,25 @@
 #include <BleGamepad.h>       // https://github.com/lemmingDev/ESP32-BLE-Gamepad
 
 int getBatteryLevel() {
-  const int MAX_ANALOG_VAL = 4095;
-  const float MAX_BATTERY_VOLTAGE = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
-  float voltageLevel = (analogRead(35) / 4095.0) * 2 * 1.1 * 3.3; // calculate voltage level
-  return (int)((voltageLevel / MAX_BATTERY_VOLTAGE) * 100);
+  const int maxDisplayed = 100;
+  const int minDisplayed = 0;
+  const float maxAnalogVal = 4095.0;
+  const float maxBatteryVoltage = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
+  const float minBatteryVoltage = 3.2; // Huzzah cutoff voltage
+  float voltageLevel = (analogRead(35) / maxAnalogVal) * 2 * 1.1 * 3.3; // calculate voltage level
+  float usablePercent = ((voltageLevel - minBatteryVoltage) / (maxBatteryVoltage - minBatteryVoltage)) * ((maxDisplayed - minDisplayed) + minDisplayed);
+  // Serial.print("raw: ");
+  // Serial.print((String)analogRead(35));
+  // Serial.print("\t");
+  // Serial.print("voltage: ");
+  // Serial.print((String)voltageLevel);
+  // Serial.print("\t");
+  // Serial.print("usable: ");
+  // Serial.print((String)usablePercent);
+  // Serial.print("\t");
+  // Serial.print("percent: \t");
+  // Serial.println((String)constrain((int)usablePercent, minDisplayed, maxDisplayed));
+  return constrain((int)usablePercent, minDisplayed, maxDisplayed);
 }
 
 // Set the battery level first or Windows will just read the default of 100
