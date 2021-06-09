@@ -6,11 +6,14 @@ int getBatteryLevel() {
   const int MAX_ANALOG_VAL = 4095;
   const float MAX_BATTERY_VOLTAGE = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
   float voltageLevel = (analogRead(35) / 4095.0) * 2 * 1.1 * 3.3; // calculate voltage level
-  return (int)(voltageLevel / MAX_BATTERY_VOLTAGE) * 100;
+  return (int)((voltageLevel / MAX_BATTERY_VOLTAGE) * 100);
 }
 
 // Set the battery level first or Windows will just read the default of 100
 BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", getBatteryLevel());
+
+long batteryUpdateInterval = 300000;
+long prevBatteryUpdate = 295000; // 5 seconds from goal
 
 ////////////////////// BUTTON MATRIX //////////////////////
 #define ROWS 5
@@ -156,9 +159,19 @@ void loop() {
           break;
         }
 
-        bleGamepad.setBatteryLevel(getBatteryLevel());
       }
     }
+  }
+
+  // send battery level periodically
+  if(now - prevBatteryUpdate > batteryUpdateInterval) {
+    prevBatteryUpdate = now;
+    int batteryLevel = getBatteryLevel();
+
+    Serial.print("battery: \t");
+    Serial.println((String)batteryLevel);
+    
+    bleGamepad.setBatteryLevel(batteryLevel);
   }
 
   handlingFunkySwitch = false;
