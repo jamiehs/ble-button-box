@@ -27,7 +27,7 @@ int getBatteryLevel() {
 // Set the battery level first or Windows will just read the default of 100
 BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", getBatteryLevel());
 
-long batteryUpdateInterval = 300000;
+long batteryUpdateInterval = 300000; // every 5 minutes
 long prevBatteryUpdate = 295000; // 5 seconds from goal
 
 ////////////////////// BUTTON MATRIX //////////////////////
