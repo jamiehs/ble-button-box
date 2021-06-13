@@ -10,17 +10,6 @@ int getBatteryLevel() {
   const float minBatteryVoltage = 3.2; // Huzzah cutoff voltage
   float voltageLevel = (analogRead(35) / maxAnalogVal) * 2 * 1.1 * 3.3; // calculate voltage level
   float usablePercent = ((voltageLevel - minBatteryVoltage) / (maxBatteryVoltage - minBatteryVoltage)) * ((maxDisplayed - minDisplayed) + minDisplayed);
-  // Serial.print("raw: ");
-  // Serial.print((String)analogRead(35));
-  // Serial.print("\t");
-  // Serial.print("voltage: ");
-  // Serial.print((String)voltageLevel);
-  // Serial.print("\t");
-  // Serial.print("usable: ");
-  // Serial.print((String)usablePercent);
-  // Serial.print("\t");
-  // Serial.print("percent: \t");
-  // Serial.println((String)constrain((int)usablePercent, minDisplayed, maxDisplayed));
   return constrain((int)usablePercent, minDisplayed, maxDisplayed);
 }
 
