@@ -23,6 +23,8 @@ long prevBatteryUpdate = 295000; // 5 seconds from goal
 #define SCREEN_HEIGHT 32 // OLED display height, in pixels
 #define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
 #define SCREEN_ADDRESS 0x3C
+#define CUSTOM_I2C_SDA 25
+#define CUSTOM_I2C_SCL 26
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
@@ -77,7 +79,6 @@ static int8_t rotEncTable[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 // The `RKJXT1F42001` encoder works really well with the
 // ESP32Encoder library, and does not work very well with
 // the implemented "Robust Rotary encoder" solution.
-ESP32Encoder funkyEncoder;
 unsigned long funkyEncoderHoldoff = 0;
 int32_t funkyEncoderPrevCenter = 0;
 uint8_t funkyEncoderUppPin = 21; // pin number
@@ -85,6 +86,7 @@ uint8_t funkyEncoderDwnPin = 17; // pin number
 uint8_t funkyEncoderUpp = 22; // button number
 uint8_t funkyEncoderDwn = 21; // button number
 #define FUNKY_HOLDOFF_TIME 30   // TO PREVENT MULTIPLE ROTATE "CLICKS"
+ESP32Encoder funkyEncoder;
 
 
 
@@ -101,27 +103,16 @@ bool handlingFunkySwitch = false;
 
 
 void setup() {
-  Wire.begin(25, 26, SCREEN_ADDRESS);
   Serial.begin(115200);
+  
+  // Custom i2c pins and address for Adafruit OLED library
+  Wire.begin(CUSTOM_I2C_SDA, CUSTOM_I2C_SCL, SCREEN_ADDRESS);
 
+  // Initialize the OLED display
+  display.begin();
 
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
-
-  display.display();
-  delay(2000); // Pause for 2 seconds
-
-  // Clear the buffer
-  display.clearDisplay();
-
-  // Show the display buffer on the screen. You MUST call display() after
-  // drawing commands to make them visible on screen!
-  display.display();
-
-  // setup encoder logic for "encoder table" encoders
+  // Setup encoder logic for "John Main" encoders:
+  // https://esp32.com/viewtopic.php?f=19&t=2881&start=30;
   for (uint8_t i=0; i<ENCODER_COUNT; i++) {
     pinMode(uppPin[i], INPUT);
     pinMode(uppPin[i], INPUT_PULLUP);
@@ -129,22 +120,35 @@ void setup() {
     pinMode(dwnPin[i], INPUT_PULLUP);
   }
 
-  // different encoder logic for funky encoder
+  // Attach ESP32Encoder pins for "funky switch" (RKJXT1F42001) encoder
   funkyEncoder.attachHalfQuad(funkyEncoderUppPin, funkyEncoderDwnPin);
   funkyEncoder.clearCount();
 
-  // start button & BLE routines/settings
+  // Initialize Keypad Matrix & Options
   customKeypad.setHoldTime(7000); // 7 seconds is considered holding
+  
+  // Initialize BLE Gamepad
   bleGamepad.begin();
+
   Serial.println("Booted!");
+
+  // Cheesy OLED boot message
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Ignition,");
+  display.println("Race Mode");
+  display.display();
+  delay(3000);
+  display.clearDisplay();
 }
 
 
 void loop() {
-
   unsigned long now = millis();
 
-  // loop through "encoder table" encoders
+  // Loop through "encoder table" encoders
   for (uint8_t i=0; i < ENCODER_COUNT; i++) {
     if(encValue[i] = readRotary(uppPin[i], dwnPin[i], i)) {
       encCount[i] +=encValue[i];
@@ -164,7 +168,7 @@ void loop() {
     }
   }
 
-  // funky encoder is using ESP32Encoder routine
+  // Funky encoder is using ESP32Encoder routine
   int32_t cntr = funkyEncoder.getCount();
   if (cntr!=funkyEncoderPrevCenter) {
     if (!funkyEncoderHoldoff) {
@@ -181,11 +185,9 @@ void loop() {
   }
 
   if (customKeypad.getKeys()) {
-    /*
-    Loops through the funky switch directions and checks to see if the push is being triggered
-    along with another direction. If it is, we will flag it for skipping the normal press
-    routine. We also press the _intended_ direction only.
-    */
+    // Loops through the funky switch directions and checks to see if the push is being triggered
+    // along with another direction. If it is, we will flag it for skipping the normal press
+    // routine. We also press the _intended_ direction only.
     for (int i = 0; i < FUNKY_DIR_COUNT; i++) {
       // if center not handling press, try directions.
       if(customKeypad.findInList((char) funkyCenterCode) != -1 && customKeypad.findInList((char) funkyDirectionCodes[i]) != -1) {
@@ -198,9 +200,10 @@ void loop() {
       }
     }
 
-    for (int i=0; i<LIST_MAX; i++) {   // Scan the whole key list.
-      if (customKeypad.key[i].stateChanged) {   // Only find keys that have changed state.
-        switch (customKeypad.key[i].kstate) {  // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
+    // Scan the whole key list and find changed keys.
+    for (int i=0; i < LIST_MAX; i++) {
+      if (customKeypad.key[i].stateChanged) { // Only find keys that have changed state.
+        switch (customKeypad.key[i].kstate) { // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
           case PRESSED:
             if(handlingFunkySwitch == false){
               pressKey(customKeypad.key[i].kchar);
@@ -221,7 +224,7 @@ void loop() {
     }
   }
 
-  // send battery level periodically
+  // Send battery level to host periodically
   if(now - prevBatteryUpdate > batteryUpdateInterval) {
     prevBatteryUpdate = now;
     int batteryLevel = getBatteryPercent();
@@ -243,11 +246,12 @@ void loop() {
     display.display();
   }
 
+  // No longer looking for strange funky switch logic
   handlingFunkySwitch = false;
 }
 
 void sendKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key);      // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
+    uint32_t gamepadbutton = pow(2,key); // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
     Serial.print("pulse\t");
     Serial.println(key);
     if(bleGamepad.isConnected()) {
@@ -258,7 +262,7 @@ void sendKey(uint8_t key) {
 }
 
 void pressKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key);      // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
+    uint32_t gamepadbutton = pow(2,key);
     Serial.print("press\t");
     Serial.println(key);
     if(bleGamepad.isConnected()) {
@@ -266,17 +270,18 @@ void pressKey(uint8_t key) {
     }
 }
 
+// Something clever should happen here eventually
 void holdKey(uint8_t key) {
-    // uint32_t gamepadbutton = pow(2,key);      // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
-    // Serial.print("hold\t");
-    // Serial.println(key);
+    uint32_t gamepadbutton = pow(2,key);
+    Serial.print("hold\t");
+    Serial.println(key);
     // if(bleGamepad.isConnected()) {
     //   bleGamepad.press(gamepadbutton);
     // }
 }
 
 void releaseKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key);      // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
+    uint32_t gamepadbutton = pow(2,key);
     Serial.print("release\t");
     Serial.println(key);
     if(bleGamepad.isConnected()) {
