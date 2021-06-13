@@ -6,33 +6,12 @@
 #include <BleGamepad.h>       // https://github.com/lemmingDev/ESP32-BLE-Gamepad
 
 
-//////////////////////////////////////////////////
-// Battery Level Functions
-//////////////////////////////////////////////////
-int getBatteryPercent() {
-  const int maxDisplayed = 100; // 100% (higher values are constrained)
-  const int minDisplayed = 0; // 0% or flat (we'll probably never get there)
-  const float maxBatteryVoltage = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
-  const float minBatteryVoltage = 3.3; // cutoff voltage (3.2, 3.3 to be safer)
-  float voltageLevel = getBatteryVoltage();
-  float usablePercent = ((voltageLevel - minBatteryVoltage) / (maxBatteryVoltage - minBatteryVoltage)) * ((maxDisplayed - minDisplayed) + minDisplayed);
-  return constrain((int)usablePercent, minDisplayed, maxDisplayed);
-}
 
-// If you read voltage values higher than 4.2, and are seeing a difference
-// between the value on your multimeter, adjust the vRef. Something between
-// 1.0 and 1.1 should be where you're aiming for.
-// You can go as deep as you want here:
-// https://esp32.com/viewtopic.php?f=19&t=2881&start=30;
-// the simple fix below works for me though.
-float getBatteryVoltage() {
-  const float vRef = 1.048; // should be 1.1V but may need to be calibrated
-  const float maxAnalogVal = 4095.0; // defines the range of the ADC calculation
-  return (analogRead(35) / maxAnalogVal) * 2 * vRef * 3.3; // calculate voltage level
-}
-
+//////////////////////////////////////////////////
+// Battery Polling Intervals
+//////////////////////////////////////////////////
 // long batteryUpdateInterval = 300000; // every 5 minutes
-long batteryUpdateInterval = 500; // 2 Hz
+long batteryUpdateInterval = 1000; // 1 Hz (testing/fun)
 long prevBatteryUpdate = 295000; // 5 seconds from goal
 
 
@@ -51,7 +30,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 //////////////////////////////////////////////////
 // BLE Gamepad Setup
 //////////////////////////////////////////////////
-BleGamepad bleGamepad("BLE Sim Buttons", "Arduino", getBatteryPercent());
+BleGamepad bleGamepad("BLE Sim Buttons", "Arduino");
 
 
 
@@ -97,7 +76,7 @@ static int8_t rotEncTable[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 //////////////////////////////////////////////////
 // The `RKJXT1F42001` encoder works really well with the
 // ESP32Encoder library, and does not work very well with
-// the "Robust Rotary encoder" solution. (every other detent)
+// the implemented "Robust Rotary encoder" solution.
 ESP32Encoder funkyEncoder;
 unsigned long funkyEncoderHoldoff = 0;
 int32_t funkyEncoderPrevCenter = 0;
@@ -110,7 +89,7 @@ uint8_t funkyEncoderDwn = 21; // button number
 
 
 //////////////////////////////////////////////////
-// Funky switch direction logic Setup
+// Funky Switch Direction Logic Setup
 //////////////////////////////////////////////////
 #define FUNKY_DIR_COUNT 4
 #define FUNKY_DIR_HOLDOFF_TIME 300 // 0.3sec
@@ -325,4 +304,26 @@ int8_t readRotary(uint8_t DATA_PIN, uint8_t CLK_PIN, uint8_t i) {
       if ((encStore[i]&0xff)==0x17) return 1;
    }
    return 0;
+}
+
+int getBatteryPercent() {
+  const int maxDisplayed = 100; // 100% (higher values are constrained)
+  const int minDisplayed = 0; // 0% or flat (we'll probably never get there)
+  const float maxBatteryVoltage = 4.2; // Max LiPoly voltage of a 3.7 battery is 4.2
+  const float minBatteryVoltage = 3.3; // cutoff voltage (3.2, 3.3 to be safer)
+  float voltageLevel = getBatteryVoltage();
+  float usablePercent = ((voltageLevel - minBatteryVoltage) / (maxBatteryVoltage - minBatteryVoltage)) * ((maxDisplayed - minDisplayed) + minDisplayed);
+  return constrain((int)usablePercent, minDisplayed, maxDisplayed);
+}
+
+// If you read voltage values higher than 4.2, and are seeing a difference
+// between the value on your multimeter, adjust the vRef. Something between
+// 1.0 and 1.1 should be where you're aiming for.
+// You can go as deep as you want here:
+// https://esp32.com/viewtopic.php?f=19&t=2881&start=30;
+// the simple fix below works for me though.
+float getBatteryVoltage() {
+  const float vRef = 1.048; // should be 1.1V but may need to be calibrated
+  const float maxAnalogVal = 4095.0; // defines the range of the ADC calculation
+  return (analogRead(35) / maxAnalogVal) * 2 * vRef * 3.3; // calculate voltage level
 }
