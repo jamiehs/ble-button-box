@@ -10,8 +10,8 @@
 //////////////////////////////////////////////////
 // Battery Polling Intervals
 //////////////////////////////////////////////////
-// long batteryUpdateInterval = 300000; // every 5 minutes
-long batteryUpdateInterval = 1000; // 1 Hz (testing/fun)
+long batteryUpdateInterval = 300000; // every 5 minutes
+// long batteryUpdateInterval = 1000; // 1 Hz (testing/fun)
 long prevBatteryUpdate = 295000; // 5 seconds from goal
 
 
@@ -61,14 +61,14 @@ Keypad customKeypad = Keypad( makeKeymap(keymap), rowPins, colPins, ROWS, COLS);
 // very noisy and cause issues and double counts when used
 // with the ESP32Encoder library. John's code works well!
 #define ENCODER_COUNT 2
-uint8_t uppPin[ENCODER_COUNT] = {16, 18};
-uint8_t dwnPin[ENCODER_COUNT] = {19, 5};
+uint8_t uppPin[ENCODER_COUNT] = {16, 18}; // A pins
+uint8_t dwnPin[ENCODER_COUNT] = {19, 5};  // B pins
 uint8_t encCount[ENCODER_COUNT] = {0, 0};
 uint8_t encValue[ENCODER_COUNT] = {0, 0};
 uint8_t encPrevNextCode[ENCODER_COUNT] = {0, 0};
 uint16_t encStore[ENCODER_COUNT]= {0, 0};
-uint8_t encoderUpp[ENCODER_COUNT] = {23,25};
-uint8_t encoderDwn[ENCODER_COUNT] = {24,26};
+uint8_t encoderUpp[ENCODER_COUNT] = {23,25}; // Up buttons
+uint8_t encoderDwn[ENCODER_COUNT] = {24,26}; // Down buttons
 static int8_t rotEncTable[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 
 
@@ -81,11 +81,11 @@ static int8_t rotEncTable[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 // the implemented "Robust Rotary encoder" solution.
 unsigned long funkyEncoderHoldoff = 0;
 int32_t funkyEncoderPrevCenter = 0;
-uint8_t funkyEncoderUppPin = 21; // pin number
-uint8_t funkyEncoderDwnPin = 17; // pin number
-uint8_t funkyEncoderUpp = 22; // button number
-uint8_t funkyEncoderDwn = 21; // button number
-#define FUNKY_HOLDOFF_TIME 30   // TO PREVENT MULTIPLE ROTATE "CLICKS"
+uint8_t funkyEncoderUppPin = 21; // A pin
+uint8_t funkyEncoderDwnPin = 17; // B pin
+uint8_t funkyEncoderUpp = 22; // Up button
+uint8_t funkyEncoderDwn = 21; // Down button
+#define FUNKY_HOLDOFF_TIME 30
 ESP32Encoder funkyEncoder;
 
 
