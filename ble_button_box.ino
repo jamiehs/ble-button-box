@@ -12,7 +12,7 @@
 //////////////////////////////////////////////////
 long batteryUpdateInterval = 300000; // every 5 minutes
 // long batteryUpdateInterval = 1000; // 1 Hz (testing/fun)
-long prevBatteryUpdate = 295000; // 5 seconds from goal
+long prevBatteryUpdate = 290000; // 10 seconds from goal
 
 
 
