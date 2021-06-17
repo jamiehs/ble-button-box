@@ -328,7 +328,8 @@ int getBatteryPercent() {
 // https://esp32.com/viewtopic.php?f=19&t=2881&start=30;
 // the simple fix below works for me though.
 float getBatteryVoltage() {
-  const float vRef = 1.048; // should be 1.1V but may need to be calibrated
+  const float vrefCalibration = 0.9417;
+  const float vRef = 1.1; // should be 1.1V but may need to be calibrated above
   const float maxAnalogVal = 4095.0; // defines the range of the ADC calculation
-  return (analogRead(35) / maxAnalogVal) * 2 * vRef * 3.3; // calculate voltage level
+  return (analogRead(35) / maxAnalogVal) * 2 * (vRef * vrefCalibration) * 3.3; // calculate voltage level
 }
