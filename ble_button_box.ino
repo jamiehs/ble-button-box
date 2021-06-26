@@ -8,6 +8,13 @@
 
 
 //////////////////////////////////////////////////
+// Adjustment Setup
+//////////////////////////////////////////////////
+bool debounceAdjustMode = false;
+
+
+
+//////////////////////////////////////////////////
 // Battery Polling Intervals
 //////////////////////////////////////////////////
 long batteryUpdateInterval = 300000; // every 5 minutes
@@ -50,6 +57,8 @@ byte keymap[ROWS][COLS] = { // buttons
   {13,14,15,16},
   {17,18,19,20}
 };
+unsigned long keypadHoldoff[ROWS * COLS + 1] = {0};
+unsigned short keypadHoldoffTime = 125;
 Keypad customKeypad = Keypad( makeKeymap(keymap), rowPins, colPins, ROWS, COLS); 
 
 
@@ -137,7 +146,7 @@ void setup() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("Ignition,");
+  display.println("Ignition");
   display.println("Race Mode");
   display.display();
   delay(3000);
@@ -172,8 +181,25 @@ void loop() {
   int32_t cntr = funkyEncoder.getCount();
   if (cntr!=funkyEncoderPrevCenter) {
     if (!funkyEncoderHoldoff) {
-      if (cntr>funkyEncoderPrevCenter) { sendKey(funkyEncoderUpp); }
-      if (cntr<funkyEncoderPrevCenter) { sendKey(funkyEncoderDwn); }
+      if(debounceAdjustMode) {
+        // Adjust current debounce value
+        unsigned short increment = 5;
+        unsigned short minValue = 0;
+        unsigned short maxValue = 500;
+        if (cntr>funkyEncoderPrevCenter && keypadHoldoffTime + increment <= maxValue) {
+          keypadHoldoffTime += increment;
+        }
+        if (cntr<funkyEncoderPrevCenter && keypadHoldoffTime - increment >= minValue) {
+          keypadHoldoffTime -= increment;
+        }
+        // Display current debounce value
+        displayDebounceMessage(keypadHoldoffTime);
+      } else {
+        // Normal funky encoder functionality
+        if (cntr>funkyEncoderPrevCenter) { sendKey(funkyEncoderUpp); }
+        if (cntr<funkyEncoderPrevCenter) { sendKey(funkyEncoderDwn); }
+      }
+
       funkyEncoderHoldoff = now;
       // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE funkyEncoderHoldoff==0 HAS A SPECIAL MEANING ABOVE
       if (funkyEncoderHoldoff==0) funkyEncoderHoldoff = 1;
@@ -192,7 +218,7 @@ void loop() {
       // if center not handling press, try directions.
       if(customKeypad.findInList((char) funkyCenterCode) != -1 && customKeypad.findInList((char) funkyDirectionCodes[i]) != -1) {
         if(now - funkyDirectionLastHoldoff[i] > FUNKY_DIR_HOLDOFF_TIME) {
-          pressKey((char) funkyDirectionCodes[i]);
+          pressKey((char) funkyDirectionCodes[i], now);
           funkyDirectionLastHoldoff[i] = now; // last press send
         }
         if (funkyDirectionLastHoldoff[i]==0) funkyDirectionLastHoldoff[i] = 1;   // SAFEGUARD WRAP AROUND OF millis() (WHICH IS TO 0) SINCE holdoff[i]==0 HAS A SPECIAL MEANING ABOVE
@@ -206,7 +232,7 @@ void loop() {
         switch (customKeypad.key[i].kstate) { // Report active key state : IDLE, PRESSED, HOLD, or RELEASED
           case PRESSED:
             if(handlingFunkySwitch == false){
-              pressKey(customKeypad.key[i].kchar);
+              pressKey(customKeypad.key[i].kchar, now);
             }
           break;
           case HOLD:
@@ -237,13 +263,9 @@ void loop() {
       bleGamepad.setBatteryLevel(batteryLevel);
     }
 
-    display.clearDisplay();
-    display.setTextSize(2);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.println((String)batteryVoltage + "V");
-    display.println((String)batteryLevel + "%");
-    display.display();
+    if(!debounceAdjustMode) {
+      displayBatteryStats();
+    }
   }
 
   // No longer looking for strange funky switch logic
@@ -251,42 +273,58 @@ void loop() {
 }
 
 void sendKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key); // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
-    Serial.print("pulse\t");
-    Serial.println(key);
-    if(bleGamepad.isConnected()) {
-      bleGamepad.press(gamepadbutton);
-      delay(100);
-      bleGamepad.release(gamepadbutton);
-    }
+  uint32_t gamepadbutton = pow(2,key); // CONVERT TO THE BINARY MAPPING GAMEPAD KEYS USE
+  Serial.print("pulse\t");
+  Serial.println(key);
+  if(bleGamepad.isConnected()) {
+    bleGamepad.press(gamepadbutton);
+    delay(100); // there needs to be a press duration...
+    bleGamepad.release(gamepadbutton);
+  }
 }
 
-void pressKey(uint8_t key) {
+void pressKey(uint8_t key, unsigned long now) {
+  if(now - keypadHoldoff[key] > keypadHoldoffTime) {
+    keypadHoldoff[key] = now;
+
+    // Disable Adjustment Mode
+    if(debounceAdjustMode && key == 15) {
+      debounceAdjustMode = false;
+      displayBatteryStats();
+      return;
+    }
+
+    // Handle regular button presses
     uint32_t gamepadbutton = pow(2,key);
     Serial.print("press\t");
     Serial.println(key);
     if(bleGamepad.isConnected()) {
       bleGamepad.press(gamepadbutton);
     }
+  }
 }
 
-// Something clever should happen here eventually
 void holdKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key);
-    Serial.print("hold\t");
-    Serial.println(key);
-    // if(bleGamepad.isConnected()) {
-    //   bleGamepad.press(gamepadbutton);
-    // }
+  uint32_t gamepadbutton = pow(2,key);
+  Serial.print("hold\t");
+  Serial.println(key);
+
+  // Enable Adjustment Mode
+  if(!debounceAdjustMode && key == 15) {
+    debounceAdjustMode = true;
+    displayDebounceMessage(keypadHoldoffTime);
+    return;
+  }
 }
 
 void releaseKey(uint8_t key) {
-    uint32_t gamepadbutton = pow(2,key);
-    Serial.print("release\t");
-    Serial.println(key);
-    if(bleGamepad.isConnected()) {
-      bleGamepad.release(gamepadbutton);
-    }
+  // Handle regular button releases
+  uint32_t gamepadbutton = pow(2,key);
+  Serial.print("release\t");
+  Serial.println(key);
+  if(bleGamepad.isConnected()) {
+    bleGamepad.release(gamepadbutton);
+  }
 }
 
 // https://www.best-microcontroller-projects.com/rotary-encoder.html
@@ -332,4 +370,27 @@ float getBatteryVoltage() {
   const float vRef = 1.1; // should be 1.1V but may need to be calibrated above
   const float maxAnalogVal = 4095.0; // defines the range of the ADC calculation
   return (analogRead(35) / maxAnalogVal) * 2 * (vRef * vrefCalibration) * 3.3; // calculate voltage level
+}
+
+void displayBatteryStats() {
+  int batteryLevel = getBatteryPercent();
+  float batteryVoltage = getBatteryVoltage();
+
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println((String)batteryVoltage + "V");
+  display.println((String)batteryLevel + "%");
+  display.display();
+}
+
+void displayDebounceMessage(unsigned short holdoff) {
+  display.clearDisplay();
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Debounce");
+  display.println((String)holdoff + "ms");
+  display.display();
 }
