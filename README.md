@@ -34,6 +34,37 @@ This is code that I run on a Huzzah32 Feather from Adafruit. It lives inside of 
 ```
 
 
+### Wiring
+
+![Huzzah 32 Wiring Diagram](./images/wiring.jpg)
+
+#### Button Matrix
+
+You can use one button matrix for all of your push buttons, your shifters, and the encoder push function. Wiring it this way is more difficult/confusing than simply using one GPIO per button, but it's far more efficient (uses fewer pins).
+
+**A note about Pin `13`** I was not able to use GPIO `13` for the button matrix (I was experiencing glitching in the matrix with all the other buttons). You may have more luck using it. I swapped the pin over to GPIO `4` afterwards.
+
+There should be no reason you couldn't add more rows or columns to the matrix using GPI `36`, `39`, `34`, and GPIO `13`; if they are avaialble in your final wiring plan. I have not tested this.
+
+#### Power Switch
+
+You have two options. You can either connect your switch between `EN` and `GND` or you can just add the switch between the positive lead of your Lipo cell. Using the `EN` pin is easier, but there could be reasons you want to switch it at the power source. This is up to you.
+
+#### Encoders
+
+There should be no reason you couldn't add two more encoders to the layout (if you wanted to) using GPI `36`, `39`, `34`, and GPIO `13`; if they are avaialble in your final wiring plan. I have not tested this.
+
+#### OLED Screen & Custom i2c Pins
+
+I adde the OLED screen after the encoders and buttons were already mapped & built. At the time I had no idea I would have wanted to add an i2c device, so I used the Huzzah's default i2c pins for the button matrix (GPIOs `22` & `23`). With the ESP 32, you can just re-assign these in the `Wire.begin()`, so in the provided code, I have assinged them to GPIOs `25` & `26`.
+
+```cpp
+// Custom i2c pins and address for Adafruit OLED library
+Wire.begin(CUSTOM_I2C_SDA, CUSTOM_I2C_SCL, SCREEN_ADDRESS);
+```
+
+-----
+
 ### Board Settings
 
 These are my VS Code settings for interfacing with the board (your port will be different):
