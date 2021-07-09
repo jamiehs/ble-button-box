@@ -57,7 +57,8 @@ byte keymap[ROWS][COLS] = { // buttons
   {13,14,15,16},
   {17,18,19,20}
 };
-unsigned short keypadHoldoffTime = 65;
+unsigned long keypadHoldoff[ROWS * COLS + 1] = {0};
+unsigned short keypadHoldoffTime = 125;
 Keypad customKeypad = Keypad( makeKeymap(keymap), rowPins, colPins, ROWS, COLS); 
 
 
@@ -133,7 +134,6 @@ void setup() {
   funkyEncoder.clearCount();
 
   // Initialize Keypad Matrix & Options
-  customKeypad.setDebounceTime(keypadHoldoffTime);
   customKeypad.setHoldTime(7000); // 7 seconds is considered holding
   
   // Initialize BLE Gamepad
@@ -188,11 +188,9 @@ void loop() {
         unsigned short maxValue = 500;
         if (cntr>funkyEncoderPrevCenter && keypadHoldoffTime + increment <= maxValue) {
           keypadHoldoffTime += increment;
-          customKeypad.setDebounceTime(keypadHoldoffTime);
         }
         if (cntr<funkyEncoderPrevCenter && keypadHoldoffTime - increment >= minValue) {
           keypadHoldoffTime -= increment;
-          customKeypad.setDebounceTime(keypadHoldoffTime);
         }
         // Display current debounce value
         displayDebounceMessage(keypadHoldoffTime);
@@ -286,19 +284,23 @@ void sendKey(uint8_t key) {
 }
 
 void pressKey(uint8_t key, unsigned long now) {
-  // Disable Adjustment Mode
-  if(debounceAdjustMode && key == 15) {
-    debounceAdjustMode = false;
-    displayBatteryStats();
-    return;
-  }
+  if(now - keypadHoldoff[key] > keypadHoldoffTime) {
+    keypadHoldoff[key] = now;
 
-  // Handle regular button presses
-  uint32_t gamepadbutton = pow(2,key);
-  Serial.print("press\t");
-  Serial.println(key);
-  if(bleGamepad.isConnected()) {
-    bleGamepad.press(gamepadbutton);
+    // Disable Adjustment Mode
+    if(debounceAdjustMode && key == 15) {
+      debounceAdjustMode = false;
+      displayBatteryStats();
+      return;
+    }
+
+    // Handle regular button presses
+    uint32_t gamepadbutton = pow(2,key);
+    Serial.print("press\t");
+    Serial.println(key);
+    if(bleGamepad.isConnected()) {
+      bleGamepad.press(gamepadbutton);
+    }
   }
 }
 
