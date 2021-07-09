@@ -111,8 +111,6 @@ bool handlingFunkySwitch = false;
 
 
 void setup() {
-  setCpuFrequencyMhz(80); // trying lower clock to improve battery life
-
   Serial.begin(115200);
   
   // Custom i2c pins and address for Adafruit OLED library
