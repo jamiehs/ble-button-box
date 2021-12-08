@@ -11,7 +11,7 @@ This is code that I run on a Huzzah32 Feather from Adafruit. It lives inside of 
 * Micro controller [Adafruit HUZZAH32 – ESP32 Feather Board](https://www.adafruit.com/product/3405) (other ESP32 boards should work fine too)
 * Ball spring detent encoders: [PEC11H-4020F-S0016](https://www.mouser.com/ProductDetail/652-PEC11H4020FS0016/) (most 6mm encoders will fit fine)
 * Multi direction switch [RKJXT1F42001](https://www.mouser.com/ProductDetail/688-RKJXT1F42001/)  (funky switch)
-* 12MM Tactile Switch 260GF 7.3MM [653-B3F-4155](https://www.mouser.com/ProductDetail/653-B3F-4155/) (I can't find the button caps)
+* 12MM Tactile Switch 260GF 7.3MM [653-B3F-4155](https://www.adafruit.com/product/1009)
 * i2c display module [SSD1306 (128x32)](https://www.amazon.com/gp/product/B08L7QW7SR)
 * 3.7V Lipo cell with JST PH 2-Pin connector.  
 *CHECK POLARITY OF THE CONNECTOR!* De-pin and swap the connector's pins if necessary: [Adafruit](https://www.adafruit.com/product/2011) or [Amazon](https://www.amazon.com/gp/product/B08FD39Y5R)
