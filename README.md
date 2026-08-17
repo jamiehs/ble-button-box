@@ -6,6 +6,26 @@ This is code that I run on a Huzzah32 Feather from Adafruit. It lives inside of 
 * Uses [John Main's code from www.best-microcontroller-projects.com](https://www.best-microcontroller-projects.com/rotary-encoder.html).
 * Huzzah32 Battery Level code adapted from [Jon Froehlich's contrubution](https://github.com/makeabilitylab/arduino/commit/0b58c0b3b3194f50a81efa4008637b5f90e681fb).
 
+## Build Photos
+
+| Finished, mounted on the wheel | Encoder & funky switch detail | Wiring the button matrix |
+| --- | --- | --- |
+| ![Finished button box mounted on the wheel](./images/build/01-finished-mounted-on-wheel.jpg) | ![Angled view of an encoder and the funky switch](./images/build/02-angled-encoder-and-funky-switch.jpg) | ![Wiring the Omron B3F switches into the matrix](./images/build/11-wiring-omron-b3f-switches.jpg) |
+
+## 3D Design
+
+| Final model before printing | Interior, without faceplate |
+| --- | --- |
+| ![Final 3D model of the button box before printing](./images/renders/06-final-3d-model-before-printing.jpg) | ![Render of the interior with battery, before the faceplate is added](./images/renders/07-without-faceplate-battery-ziptied.jpg) |
+
+| Switch & encoder shaft mockup | Funky switch mount & USB breakout |
+| --- | --- |
+| ![Render of the switch and encoder shaft mockup](./images/renders/09-switch-and-encoder-shaft-mockup.jpg) | ![Render of the funky switch mount and USB breakout](./images/renders/10-funky-switch-mount-usb-breakout.jpg) |
+
+## Inspiration
+
+This project wasn't built in a vacuum — [this video](./video/addon-panel-demo.mp4) is footage of an earlier build that inspired the approach here. It's not a demo of *this* box; see the Build Photos above and the code in this repo for the actual implementation.
+
 ## Parts List
 
 * Micro controller [Adafruit HUZZAH32 – ESP32 Feather Board](https://www.adafruit.com/product/3405) (other ESP32 boards should work fine too)
