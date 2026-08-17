@@ -1,10 +1,10 @@
 # Bluetooth Button Box
 
-This is code that I run on a Huzzah32 Feather from Adafruit. It lives inside of the button box of my sim racing wheel. This gives me 3 encoders, a "funky switch", & 20+ buttons, all wirelessly. The Huzzah 32 ESP32 board has a BMS built in, and will charge the lithium cell whether the board is powered or not. I use a magnetic USB-Micro-B connector for quick connect and disconnect for charging. with ~1400 mAh in the cell I can get close to 24 hours of continuous on time.
+This is code that I run on a Huzzah32 Feather from Adafruit. It lives inside of the button box of my sim racing wheel. This gives me 3 encoders, a "funky switch", & 20+ buttons, all wirelessly. The Huzzah 32 ESP32 board has a BMS built in, and will charge the lithium cell whether the board is powered or not. I've added a Micro-B-to-magnetic cable adapter for quick connect and disconnect while charging — the same kind I use on my keyboards and headphones, optional, see Parts List. With ~1400 mAh in the cell I can get close to 24 hours of continuous on time.
 
 * Originally forked from [Magnus Thome's implementation](https://github.com/MagnusThome/ESP32-BLE-Gamepad).
 * Uses [John Main's code from www.best-microcontroller-projects.com](https://www.best-microcontroller-projects.com/rotary-encoder.html).
-* Huzzah32 Battery Level code adapted from [Jon Froehlich's contrubution](https://github.com/makeabilitylab/arduino/commit/0b58c0b3b3194f50a81efa4008637b5f90e681fb).
+* Huzzah32 Battery Level code adapted from [Jon Froehlich's contribution](https://github.com/makeabilitylab/arduino/commit/0b58c0b3b3194f50a81efa4008637b5f90e681fb).
 
 ## Build Photos
 
@@ -31,17 +31,17 @@ This project wasn't built in a vacuum — [this video](./video/addon-panel-demo.
 * Micro controller [Adafruit HUZZAH32 – ESP32 Feather Board](https://www.adafruit.com/product/3405) (other ESP32 boards should work fine too)
 * Ball spring detent encoders: [PEC11H-4020F-S0016](https://www.mouser.com/ProductDetail/652-PEC11H4020FS0016/) (most 6mm encoders will fit fine)
 * Multi direction switch [RKJXT1F42001](https://www.mouser.com/ProductDetail/688-RKJXT1F42001/)  (funky switch)
-* 12MM Tactile Switch 260GF 7.3MM [653-B3F-4155](https://www.adafruit.com/product/1009)
+* 12MM Tactile Switch, 260gf actuation force, 7.3mm button height [653-B3F-4155](https://www.adafruit.com/product/1009)
 * i2c display module [SSD1306 (128x32)](https://www.amazon.com/gp/product/B08L7QW7SR)
-* 3.7V Lipo cell with JST PH 2-Pin connector.  
-*CHECK POLARITY OF THE CONNECTOR!* De-pin and swap the connector's pins if necessary: [Adafruit](https://www.adafruit.com/product/2011) or [Amazon](https://www.amazon.com/gp/product/B08FD39Y5R)
+* 3.7V Lipo cell with JST PH 2-Pin connector: [Adafruit](https://www.adafruit.com/product/2011) or [Amazon](https://www.amazon.com/gp/product/B08FD39Y5R)
+  **Warning:** check the polarity of the connector before plugging it in — de-pin and swap the connector's pins if necessary.
 * 3D printed parts in the [STL directory](./stl); you'll probably design your own enclosure though.
 * Power switch (SPST). This is used to ground the `EN` pin which shuts off the 3.3V regulator but leaves the charging circuit powered.
+* (Optional) Micro-B-to-magnetic cable adapter — plugs into the Huzzah32's built-in USB port; the cable itself then connects/disconnects magnetically for quick charging. Not required; a normal USB-Micro-B cable works fine otherwise. This is a generic accessory (the same kind used for keyboards, headphones, etc.), so no specific link here — check reviews for quality. If you're building this today, look for a USB-C version instead; Micro-B parts are getting harder to find.
 
+## Prerequisites
 
-### Prerequisites
-
-* Install the Arduino IDE
+* Install the Arduino IDE (used as the build backend for the Board Settings below, if you're building from VS Code)
 * Install the board definitions for the ESP32
 * Install the needed libraries (listed below)
 
@@ -53,37 +53,36 @@ This project wasn't built in a vacuum — [this video](./video/addon-panel-demo.
 #include <BleGamepad.h>       // https://github.com/lemmingDev/ESP32-BLE-Gamepad
 ```
 
-
-### Wiring
+## Wiring
 
 ![Huzzah 32 Wiring Diagram](./images/wiring.jpg)
 
-#### Button Matrix
+### Button Matrix
 
 You can use one button matrix for all of your push buttons, your shifters, and the encoder push function. Wiring it this way is more difficult/confusing than simply using one GPIO per button, but it's far more efficient (uses fewer pins).
 
 **A note about Pin `13`** I was not able to use GPIO `13` for the button matrix (I was experiencing glitching in the matrix with all the other buttons). You may have more luck using it. I swapped the pin over to GPIO `4` afterwards.
 
-There should be no reason you couldn't add more rows or columns to the matrix using GPI `36`, `39`, `34`, and GPIO `13`; if they are avaialble in your final wiring plan. I have not tested this.
+There should be no reason you couldn't add more rows or columns to the matrix using GPIOs `36`, `39`, `34`, and `13`, if they're available in your final wiring plan. I have not tested this.
 
-#### Power Switch
+### Power Switch
 
-You have two options. You can either connect your switch between `EN` and `GND` or you can just add the switch between the positive lead of your Lipo cell. Using the `EN` pin is easier, but there could be reasons you want to switch it at the power source. This is up to you.
+You have two options. You can either connect your switch between `EN` and `GND` or you can add the switch between the positive lead of your Lipo cell. Using the `EN` pin is easier, but switching at the power source cuts power to the charging circuit too, which may be preferable if you want the box fully dead when off.
 
-#### Encoders
+### Encoders
 
-There should be no reason you couldn't add two more encoders to the layout (if you wanted to) using GPI `36`, `39`, `34`, and GPIO `13`; if they are avaialble in your final wiring plan. I have not tested this.
+There should be no reason you couldn't add two more encoders to the layout (if you wanted to) using GPIOs `36`, `39`, `34`, and `13`, if they're available in your final wiring plan. I have not tested this.
 
-#### OLED Screen & Custom i2c Pins
+### OLED Screen & Custom i2c Pins
 
-I adde the OLED screen after the encoders and buttons were already mapped & built. At the time I had no idea I would have wanted to add an i2c device, so I used the Huzzah's default i2c pins for the button matrix (GPIOs `22` & `23`). With the ESP 32, you can just re-assign these in the `Wire.begin()`, so in the provided code, I have assinged them to GPIOs `25` & `26`.
+I added the OLED screen after the encoders and buttons were already mapped & built. I hadn't anticipated needing an i2c device at the time, so I'd used the Huzzah's default i2c pins for the button matrix (GPIOs `22` & `23`). With the ESP32, you can just re-assign these in `Wire.begin()`, so in the provided code, I've assigned them to GPIOs `25` & `26`.
 
 ```cpp
 // Custom i2c pins and address for Adafruit OLED library
 Wire.begin(CUSTOM_I2C_SDA, CUSTOM_I2C_SCL, SCREEN_ADDRESS);
 ```
 
------
+## Firmware Notes
 
 ### Board Settings
 
@@ -98,7 +97,7 @@ These are my VS Code settings for interfacing with the board (your port will be 
 }
 ```
 
-### Button Matrix
+### Button Matrix Implementation
 
 I'm not using any diodes, but you can implement them if you need to. I am using a 5x4 matrix for a total of 20 buttons:
 
@@ -162,10 +161,9 @@ for (int i = 0; i < FUNKY_DIR_COUNT; i++) {
 }
 ```
 
-I'm sure there's a more elegant way to handle this, but I'm just not seeing it.
+There's likely a cleaner way to implement this, but this approach has worked reliably in practice.
 
-
-### Encoders
+### Encoder Implementation
 
 You will need to assign pins and "buttons" for your encoders too!
 
@@ -200,7 +198,7 @@ int32_t funkyEncoderPrevCenter = 0;
 uint8_t funkyEncoderUppPin = 21; // A pin
 uint8_t funkyEncoderDwnPin = 17; // B pin
 uint8_t funkyEncoderUpp = 22; // Up button
-uint8_t funkyEncoderDwn = 21; // Down button
+uint8_t funkyEncoderDwn = 21; // Down button (unrelated to funkyEncoderUppPin above; button-code and GPIO-pin values are separate namespaces and happen to collide here)
 #define FUNKY_HOLDOFF_TIME 30
 ESP32Encoder funkyEncoder;
 ```
@@ -208,7 +206,6 @@ ESP32Encoder funkyEncoder;
 Here the encoders are listed as columns. In this example, `16`, `19` are one encoder, and `18`, `5` are another, etc.
 
 Likewise, when the encoder attached to `16`, `19` is rolled up or down, it'll press the gamepad buttons: `23`, `24`. These can be assigned to whatever you need them to be.
-
 
 ### Battery Level
 
@@ -219,9 +216,13 @@ getBatteryVoltage();
 getBatteryPercent();
 ```
 
-Currently it sends the percent reading to the Bluetooth host every 5 minutes. The display code will later be updated to display this upon a button press combination (or perhaps holding a specific button for a few seconds).
+Currently it sends the percent reading to the Bluetooth host every 5 minutes.
 
 Depending on your board, cell, and multimeter, you may need to adjust the vRef value.
 ```cpp
 const float vRef = 1.048; // should be 1.1V but may need to be calibrated
 ```
+
+## License
+
+[MIT](./LICENSE)
